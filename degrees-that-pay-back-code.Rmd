@@ -1,0 +1,201 @@
+---
+title: "495 proj"
+author: "Michelle Ortiz"
+date: "4/24/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **1. Exploratory Data Analysis**
+
+```{r read.in.datasets, echo=TRUE, warning=FALSE, message=FALSE}
+#load library
+library(readr)
+library(tibble)
+library(tidyverse)
+#read in data
+degrees <- as.tibble(read_csv('degrees-that-pay-back.csv'))
+#remove $ and , from columns
+degrees <- data.frame(lapply(degrees, function(x) {
+            gsub("[$,]", "", x)}))
+#convert character columns to numeric
+degrees[, 2:8] <- sapply(degrees[, c(2:8)], as.numeric)
+#shorter variable names
+degrees <- degrees %>%
+  rename(
+    UMajor = Undergraduate.Major,
+    Start_Med_Sal = Starting.Median.Salary,
+    Mid_Med_Sal = Mid.Career.Median.Salary,
+    Perc_Change = Percent.change.from.Starting.to.Mid.Career.Salary,
+    Mid_10_Sal = Mid.Career.10th.Percentile.Salary,
+    Mid_25_Sal = Mid.Career.25th.Percentile.Salary,
+    Mid_75_Sal = Mid.Career.75th.Percentile.Salary,
+    Mid_90_Sal = Mid.Career.90th.Percentile.Salary
+  )
+#Add variable
+`Degree Type` <- c("Business", "STEM", "STEM", "Humanity", "STEM", "Humanity", "STEM", "Business", "STEM", "STEM", "STEM", "Humanity", "STEM", "STEM", "STEM", "Humanity", "Humanity", "Humanity", "Humanity", "STEM", "Humanity", "Humanity", "Business", "Humanity", "Humanity", "STEM", "Humanity", "Business", "Humanity", "Business", "STEM", "STEM", "Humanity", "Business", "Humanity", "Business", "Business", "STEM", "STEM", "Humanity", "STEM", "STEM", "Humanity", "STEM", "STEM", "Humanity", "Humanity", "Humanity", "Humanity", "Humanity")
+degrees <-  degrees %>% 
+  add_column(`Degree Type`)
+#convert to tibble
+degrees <- as.tibble(degrees)
+#print dataframe
+str(degrees)
+```
+
+**1.1 Summary Statistics Table**
+```{r summary.statistics.table, echo=TRUE, warning=FALSE, message=FALSE}
+#load libraries
+library(skimr)
+#summary table
+skim_without_charts(degrees)
+```
+
+**1.2 Check Correlation Between Continuous Feature Variables**
+```{r correlation, echo=TRUE, warning=FALSE, message=FALSE}
+#load libraries
+library(ggplot2)
+library(ggcorrplot)
+#subset continuous variables
+noncontinuous <- names(degrees) %in% c("UMajor", "Degree Type")
+degrees_continuous <- degrees[!noncontinuous]
+#calculate correlations
+degrees_correlation = cor(degrees_continuous)
+#plot correlations
+ggcorrplot(degrees_correlation, tl.cex = 10, lab = TRUE)
+#dropping highly correlated variables
+drop <- names(degrees) %in% c("Mid_10_Sal", "Mid_25_Sal", "Mid_75_Sal")
+degrees <- degrees[!drop]
+```
+
+**1.3 Histograms, Scatterplot Matrix, Boxplots**
+```{r histograms, echo=TRUE, warning=FALSE, message=FALSE}
+#load libraries
+library(gridExtra)
+#histograms
+d1 <- ggplot(degrees, aes(x = Start_Med_Sal)) +
+  geom_histogram(binwidth = 1500) +
+  aes(fill = `Degree Type`) + 
+  xlab("Starting Median Salary ($)") +
+  scale_x_continuous(breaks = c(40000, 50000, 60000, 70000), 
+                     labels = c("40k", "50k", "60k", "70k"))
+d2 <- ggplot(degrees, aes(x = Mid_Med_Sal)) +
+  geom_histogram(binwidth = 1500) +
+  aes(fill = `Degree Type`) + 
+  xlab("Mid Career Median Salary ($)") +
+  scale_x_continuous(breaks = c(50000, 60000, 70000, 80000, 90000, 100000, 110000), 
+                     labels = c("50k", "60k", "70k", "80k", "90k", "100k", "110k"))
+d3 <- ggplot(degrees, aes(x = Perc_Change)) +
+  geom_histogram(binwidth = 3.5) +
+  aes(fill = `Degree Type`) + 
+  xlab("% Change from Starting to Mid Career Salary ($)")
+d4 <- ggplot(degrees, aes(x = Mid_90_Sal)) +
+  geom_histogram(binwidth = 5000) +
+  aes(fill = `Degree Type`) + 
+  xlab("Mid 90th Percentile Salary ($)") +
+  scale_x_continuous(breaks = c(90000, 120000, 150000, 180000, 210000), 
+                     labels = c("90k", "120k", "150k", "180k", "210k"))
+grid.arrange(d1, d2, d3, d4, ncol = 2, nrow = 2)
+#scatterplots
+drop <- names(degrees_continuous) %in% c("Mid_10_Sal", "Mid_25_Sal", "Mid_75_Sal")
+degrees_continuous <- degrees_continuous[!drop]
+pairs(degrees_continuous, lower.panel = NULL, cex.labels = .8, cex = .2) 
+#boxplots 
+d5 <- ggplot(degrees, aes(x=Start_Med_Sal)) +
+  geom_boxplot() +
+  xlab("Starting Median Salary ($)") + 
+  xlab("Starting Median Salary ($)") +
+  scale_x_continuous(breaks = c(40000, 50000, 60000, 70000), 
+                     labels = c("40k", "50k", "60k", "70k"))
+d6 <- ggplot(degrees, aes(x=Mid_Med_Sal)) +
+  geom_boxplot() +
+  xlab("Mid Career Median Salary ($)") +
+  scale_x_continuous(breaks = c(50000, 60000, 70000, 80000, 90000, 100000, 110000), 
+                     labels = c("50k", "60k", "70k", "80k", "90k", "100k", "110k"))
+d7 <- ggplot(degrees, aes(x=Perc_Change)) +
+  geom_boxplot() +
+  xlab("% Change from Starting to Mid Career ($)")
+d8 <- ggplot(degrees, aes(x=Mid_90_Sal)) +
+  geom_boxplot() +
+  xlab("Mid 90th Percentile Salary ($)") +
+  scale_x_continuous(breaks = c(90000, 120000, 150000, 180000, 210000), 
+                     labels = c("90k", "120k", "150k", "180k", "210k"))
+grid.arrange(d5, d6, d7, d8, ncol = 2, nrow = 2)
+```
+
+# **2. Answering Questions**
+
+**2.1 What is the average starting median salary for a degree?**
+```{r 2.1q, echo=TRUE, warning=FALSE, message=FALSE}
+#load libraries
+library(infer)
+#average median salary for a degree
+x_bar <- degrees %>%
+  summarise(mean_start_med_sal = mean(Start_Med_Sal))
+#specify variables, generate reps and calculate summary stats
+bootstrap_dist <- degrees %>%
+  specify(response = Start_Med_Sal) %>%
+  generate(reps = 1000) %>%
+  calculate(stat = "mean")
+#visualize results
+visualize(bootstrap_dist) +
+  ggtitle("Bootstrap Distribution of Average Starting Median Salary ($)")
+#calculate percentile confidence interval
+percentile_ci <- bootstrap_dist %>%
+  get_confidence_interval(level = 0.95, type = "percentile") 
+percentile_ci
+#visualize percentile interval
+visualize(bootstrap_dist) +
+  shade_confidence_interval(endpoints = percentile_ci) +
+  ggtitle("Bootstrap Distribution with Percentile Confidence Interval")
+#calculate standard error confidence interval
+standard_error_ci <- bootstrap_dist %>%
+  get_confidence_interval(level = 0.95, type = "se", point_estimate = x_bar)
+standard_error_ci
+#visualize standard error interval
+visualize(bootstrap_dist) +
+  shade_confidence_interval(endpoints = standard_error_ci) +
+  ggtitle("Bootstrap Distribution with Standard Error Confidence Interval")
+```
+
+**2.2 What is the relationship between Starting Median Salary and Mid Career Median Salary?**
+```{r 2.2q, echo=TRUE, warning=FALSE, message=FALSE}
+#load libraries
+library(scales)
+library(moderndive)
+#scatterplot
+ggplot(degrees, aes(x = Start_Med_Sal, y = Mid_Med_Sal)) +
+  geom_point(color = "navy") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE) +
+  labs(x = "Starting Median Salary ($)", y = "Mid Career Median Salary ($)") +
+  ggtitle("Scatterplot of Starting Median Salary Vs Mid Career Median Salary") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma)
+#fit regression model
+salary_model <- lm(Mid_Med_Sal ~ Start_Med_Sal, data = degrees)
+#get regression table
+get_regression_table(salary_model)
+#observed/fitted values and residuals
+regression_points <- get_regression_points(salary_model)
+regression_points
+```
+
+**2.3 What are the degrees that make the most?**
+```{r 2.3q, echo=TRUE}
+#sorted by starting median salary
+degrees_sorted1 <- degrees %>%
+  arrange(desc(Start_Med_Sal))
+head(degrees_sorted1)
+#sorted by mid career median salary
+degrees_sorted2 <- degrees %>%
+  arrange(desc(Mid_Med_Sal))
+head(degrees_sorted2)
+#sorted by percent change
+degrees_sorted3 <- degrees %>%
+  arrange(desc(Perc_Change))
+head(degrees_sorted3)
+```
